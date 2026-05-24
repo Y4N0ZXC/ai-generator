@@ -1,0 +1,166 @@
+-- Y4N0 AI GENERATOR LUA (Exploit‑ready for Delta)
+-- Use ;ask <prompt> in any game chat
+
+local lastCode = nil
+
+local snippets = {
+    factorial = [[
+local function factorial(n)
+    if n < 0 then error("non‑negative expected") end
+    local res = 1
+    for i = 2, n do res = res * i end
+    return res
+end]],
+    fibonacci = [[
+local function fib(n)
+    local a,b = 0,1
+    for _=1,n do a,b = b,a+b end
+    return a
+end]],
+    quicksort = [[
+local function qsort(t, lo, hi)
+    lo,hi = lo or 1, hi or #t
+    if lo >= hi then return t end
+    local p = t[math.floor((lo+hi)/2)]
+    local i,j = lo,hi
+    while i <= j do
+        while t[i] < p do i = i+1 end
+        while t[j] > p do j = j-1 end
+        if i <= j then t[i],t[j] = t[j],t[i]; i=i+1; j=j-1 end
+    end
+    qsort(t,lo,j); qsort(t,i,hi)
+    return t
+end]],
+    binary_search = [[
+local function bsearch(arr, val, lo, hi)
+    lo,hi = lo or 1, hi or #arr
+    if lo > hi then return nil end
+    local mid = math.floor((lo+hi)/2)
+    if arr[mid] == val then return mid
+    elseif arr[mid] > val then return bsearch(arr,val,lo,mid-1)
+    else return bsearch(arr,val,mid+1,hi) end
+end]],
+    class = [[
+local class = {}
+function class:new(o)
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    return o
+end]],
+    mergesort = [[
+local function mergeSort(t)
+    if #t <= 1 then return t end
+    local mid = math.floor(#t/2)
+    local left,right = {},{}
+    for i=1,mid do left[i]=t[i] end
+    for i=mid+1,#t do right[i-mid]=t[i] end
+    left = mergeSort(left)
+    right = mergeSort(right)
+    return function(a,b)
+        local res,i,j = {},1,1
+        while i <= #a and j <= #b do
+            if a[i] <= b[j] then res[#res+1]=a[i]; i=i+1
+            else res[#res+1]=b[j]; j=j+1 end
+        end
+        while i <= #a do res[#res+1]=a[i]; i=i+1 end
+        while j <= #b do res[#res+1]=b[j]; j=j+1 end
+        return res
+    end(left,right)
+end]],
+    reverse_string = [[
+local function rev(s)
+    local r = ""
+    for i=#s,1,-1 do r=r..s:sub(i,i) end
+    return r
+end]]
+}
+
+local function genCode(input)
+    local low = string.lower(input)
+    for name,code in pairs(snippets) do
+        if low:find(name,1,true) then
+            lastCode = code
+            return code
+        end
+    end
+    if low:find("function") then
+        local name = input:match("function called (%w+)") or "myFunc"
+        lastCode = string.format("local function %s(...)\n    -- your logic\n    return nil\nend", name)
+        return lastCode
+    end
+    return nil
+end
+
+local function genIdea()
+    local ideas = {
+        "🎮 Roguelike dungeon crawler | procedural generation + LÖVE2D",
+        "🛠️ Auto‑farm script with GUI and anti‑AFK",
+        "🧠 A* pathfinding for NPCs in Roblox",
+        "✨ Particle effect system with Beam & ParticleEmitter",
+        "📦 Inventory system with drag & drop and tooltips"
+    }
+    return ideas[math.random(#ideas)]
+end
+
+local function improve()
+    if not lastCode then return "No code to improve." end
+    local c = lastCode
+    if not c:find("assert") and c:find("function") then
+        c = c:gsub("(local function %w+%([^)]*%))", "%1\n    assert(true, 'add validation here')")
+    end
+    lastCode = c
+    return "🚀 Improved:\n" .. c
+end
+
+local function respond(prompt)
+    local low = string.lower(prompt)
+    if low:find("generate") or low:find("write") or low:find("code for") then
+        local c = genCode(prompt)
+        if c then return "```lua\n"..c.."\n```\nUse 'improve' to enhance." end
+        return "Try: generate quicksort, fibonacci, class, etc."
+    elseif low:find("idea") then
+        return genIdea()
+    elseif low:find("improve") then
+        return improve()
+    elseif low:find("help") then
+        return "Commands: ;ask generate <code>, ;ask idea, ;ask improve"
+    else
+        return "Type ;ask generate factorial  or  ;ask game idea"
+    end
+end
+
+-- Chat command handler (works in most executors)
+local function onChat(msg)
+    if string.sub(msg,1,1) ~= ";" then return end
+    local cmd = msg:match("^;(%S+)")
+    if cmd == "ask" then
+        local prompt = msg:match("^;ask%s+(.+)$")
+        if prompt then
+            local reply = respond(prompt)
+            print("[Y4N0] " .. reply)
+        end
+    end
+end
+
+-- Hook into Roblox chat events (Delta compatible)
+local success, err = pcall(function()
+    local rs = game:GetService("ReplicatedStorage")
+    local ce = rs:FindFirstChild("DefaultChatSystemChatEvents")
+    if ce then
+        ce.OnClientEvent:Connect(function(data)
+            if data and data.Message then onChat(data.Message) end
+        end)
+    else
+        local tcs = game:GetService("TextChatService")
+        tcs.OnClientEvent:Connect(function(data)
+            if data and data.Text then onChat(data.Text) end
+        end)
+    end
+end)
+
+if not success then
+    print("[Y4N0] Chat hook failed, but you can still use ask() manually.")
+end
+
+print("✅ Y4N0 AI loaded. Type ;ask generate quicksort in chat.")
